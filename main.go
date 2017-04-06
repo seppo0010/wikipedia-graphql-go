@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"./wikipedia"
 
 	"github.com/graphql-go/graphql"
-	"github.com/seppo0010/wikipedia-go"
 )
 
 var userType = graphql.NewObject(
@@ -22,13 +22,13 @@ var userType = graphql.NewObject(
 			"title": &graphql.Field{
 				Type: graphql.String,
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					return p.Source.(*wikipedia.Page).Title()
+					return p.Source.(wikipedia.Page).Title()
 				},
 			},
 			"content": &graphql.Field{
 				Type: graphql.String,
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					return p.Source.(*wikipedia.Page).Content()
+					return p.Source.(wikipedia.Page).Content()
 				},
 			},
 		},
@@ -52,11 +52,11 @@ var queryType = graphql.NewObject(
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					idQuery, isOK := p.Args["id"].(string)
 					if isOK {
-						return wikipedia.NewPageFromId(wikipedia.NewWikipedia(), idQuery), nil
+						return wikipedia.NewWikipedia().PageFromId(idQuery), nil
 					}
 					titleQuery, isOK := p.Args["title"].(string)
 					if isOK {
-						return wikipedia.NewPage(wikipedia.NewWikipedia(), titleQuery), nil
+						return wikipedia.NewWikipedia().Page(titleQuery), nil
 					}
 					return nil, nil
 				},
