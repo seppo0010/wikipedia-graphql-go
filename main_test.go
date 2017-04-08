@@ -30,6 +30,41 @@ func TestPageStrings(t *testing.T) {
 	}
 }
 
+func TestPageImages(t *testing.T) {
+	t.Parallel()
+	query := "{page(title:\"Argentina\"){images{url,title,description_url}}}"
+	result := executeQuery(query, schema)
+	images := result.Data.(map[string]interface{})["page"].(map[string]interface{})["images"].([]interface{})
+	if len(images) != 2 {
+		t.Error("wrong image count")
+		return
+	}
+	if images[0].(map[string]interface{})["url"].(string) != "url" {
+		t.Error("wrong url")
+		return
+	}
+	if images[1].(map[string]interface{})["url"].(string) != "url2" {
+		t.Error("wrong url2")
+		return
+	}
+	if images[0].(map[string]interface{})["title"].(string) != "title" {
+		t.Error("wrong title")
+		return
+	}
+	if images[1].(map[string]interface{})["title"].(string) != "title2" {
+		t.Error("wrong title2")
+		return
+	}
+	if images[0].(map[string]interface{})["description_url"].(string) != "description" {
+		t.Error("wrong description")
+		return
+	}
+	if images[1].(map[string]interface{})["description_url"].(string) != "description2" {
+		t.Error("wrong description2")
+		return
+	}
+}
+
 func TestMain(m *testing.M) {
 	wiki = NewWikipediaMock()
 	wiki.(*WikipediaMock).AddPage(&PageMock{
@@ -38,6 +73,10 @@ func TestMain(m *testing.M) {
 		content:     "Argentina is a country",
 		htmlContent: "<b>Argentina</b> is a country",
 		summary:     "The country",
+		images: []wikipedia.ImageRequest{
+			{Image: wikipedia.Image{Url: "url", Title: "title", DescriptionUrl: "description"}},
+			{Image: wikipedia.Image{Url: "url2", Title: "title2", DescriptionUrl: "description2"}},
+		},
 	})
 	os.Exit(m.Run())
 }
@@ -63,6 +102,8 @@ type PageMock struct {
 	htmlContentErr error
 	summary        string
 	summaryErr     error
+	images         []wikipedia.ImageRequest
+	imagesErr      error
 }
 
 func (w *WikipediaMock) AddPage(page *PageMock) {
@@ -115,7 +156,12 @@ func (p *PageMock) HtmlContent() (content string, err error) { return p.htmlCont
 func (p *PageMock) Summary() (summary string, err error)     { return p.summary, p.summaryErr }
 func (p *PageMock) Images() <-chan wikipedia.ImageRequest {
 	ch := make(chan wikipedia.ImageRequest)
-	defer close(ch)
+	go func() {
+		for _, im := range p.images {
+			ch <- im
+		}
+		close(ch)
+	}()
 	return ch
 }
 func (p *PageMock) Extlinks() <-chan wikipedia.ReferenceRequest {

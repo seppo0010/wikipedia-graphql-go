@@ -9,7 +9,33 @@ import (
 	"github.com/seppo0010/wikipedia-go"
 )
 
-var userType = graphql.NewObject(
+var imageType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name: "Image",
+		Fields: graphql.Fields{
+			"url": &graphql.Field{
+				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return p.Source.(wikipedia.Image).Url, nil
+				},
+			},
+			"title": &graphql.Field{
+				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return p.Source.(wikipedia.Image).Title, nil
+				},
+			},
+			"description_url": &graphql.Field{
+				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return p.Source.(wikipedia.Image).DescriptionUrl, nil
+				},
+			},
+		},
+	},
+)
+
+var pageType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "Page",
 		Fields: graphql.Fields{
@@ -43,6 +69,19 @@ var userType = graphql.NewObject(
 					return p.Source.(wikipedia.Page).Summary()
 				},
 			},
+			"images": &graphql.Field{
+				Type: graphql.NewList(imageType),
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					images := make([]wikipedia.Image, 0, 100)
+					for imageResult := range p.Source.(wikipedia.Page).Images() {
+						if imageResult.Err != nil {
+							return nil, imageResult.Err
+						}
+						images = append(images, imageResult.Image)
+					}
+					return images, nil
+				},
+			},
 		},
 	},
 )
@@ -52,7 +91,7 @@ var queryType = graphql.NewObject(
 		Name: "Query",
 		Fields: graphql.Fields{
 			"page": &graphql.Field{
-				Type: userType,
+				Type: pageType,
 				Args: graphql.FieldConfigArgument{
 					"id": &graphql.ArgumentConfig{
 						Type: graphql.String,
