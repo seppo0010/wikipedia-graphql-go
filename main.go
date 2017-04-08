@@ -31,6 +31,18 @@ var userType = graphql.NewObject(
 					return p.Source.(wikipedia.Page).Content()
 				},
 			},
+			"html_content": &graphql.Field{
+				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return p.Source.(wikipedia.Page).HtmlContent()
+				},
+			},
+			"summary": &graphql.Field{
+				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return p.Source.(wikipedia.Page).Summary()
+				},
+			},
 		},
 	},
 )

@@ -4,9 +4,9 @@ import "os"
 import "testing"
 import "github.com/seppo0010/wikipedia-go"
 
-func TestContent(t *testing.T) {
+func TestPageStrings(t *testing.T) {
 	t.Parallel()
-	query := "{page(title:\"Argentina\"){id,title,content}}"
+	query := "{page(title:\"Argentina\"){id,title,content,html_content,summary}}"
 	result := executeQuery(query, schema)
 	if result.Data.(map[string]interface{})["page"].(map[string]interface{})["id"].(string) != "1234" {
 		t.Error("invalid page id")
@@ -20,14 +20,24 @@ func TestContent(t *testing.T) {
 		t.Error("invalid page content")
 		return
 	}
+	if result.Data.(map[string]interface{})["page"].(map[string]interface{})["html_content"].(string) != "<b>Argentina</b> is a country" {
+		t.Error("invalid page html content")
+		return
+	}
+	if result.Data.(map[string]interface{})["page"].(map[string]interface{})["summary"].(string) != "The country" {
+		t.Error("invalid page summary")
+		return
+	}
 }
 
 func TestMain(m *testing.M) {
 	wiki = NewWikipediaMock()
 	wiki.(*WikipediaMock).AddPage(&PageMock{
-		id:      "1234",
-		title:   "Argentina",
-		content: "Argentina is a country",
+		id:          "1234",
+		title:       "Argentina",
+		content:     "Argentina is a country",
+		htmlContent: "<b>Argentina</b> is a country",
+		summary:     "The country",
 	})
 	os.Exit(m.Run())
 }
@@ -43,12 +53,16 @@ type WikipediaMock struct {
 	PagesByTitle map[string]*PageMock
 }
 type PageMock struct {
-	id         string
-	idErr      error
-	title      string
-	titleErr   error
-	content    string
-	contentErr error
+	id             string
+	idErr          error
+	title          string
+	titleErr       error
+	content        string
+	contentErr     error
+	htmlContent    string
+	htmlContentErr error
+	summary        string
+	summaryErr     error
 }
 
 func (w *WikipediaMock) AddPage(page *PageMock) {
@@ -97,8 +111,8 @@ func (w *WikipediaMock) CategoriesResults() string                            { 
 func (p *PageMock) Id() (pageId string, err error)           { return p.id, p.idErr }
 func (p *PageMock) Title() (pageTitle string, err error)     { return p.title, p.titleErr }
 func (p *PageMock) Content() (content string, err error)     { return p.content, p.contentErr }
-func (p *PageMock) HtmlContent() (content string, err error) { return "", nil }
-func (p *PageMock) Summary() (summary string, err error)     { return "", nil }
+func (p *PageMock) HtmlContent() (content string, err error) { return p.htmlContent, p.htmlContentErr }
+func (p *PageMock) Summary() (summary string, err error)     { return p.summary, p.summaryErr }
 func (p *PageMock) Images() <-chan wikipedia.ImageRequest {
 	ch := make(chan wikipedia.ImageRequest)
 	defer close(ch)
