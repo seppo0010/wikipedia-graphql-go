@@ -65,6 +65,25 @@ func TestPageImages(t *testing.T) {
 	}
 }
 
+func TestPageReferences(t *testing.T) {
+	t.Parallel()
+	query := "{page(title:\"Argentina\"){references{url}}}"
+	result := executeQuery(query, schema)
+	references := result.Data.(map[string]interface{})["page"].(map[string]interface{})["references"].([]interface{})
+	if len(references) != 2 {
+		t.Error("wrong reference count")
+		return
+	}
+	if references[0].(map[string]interface{})["url"].(string) != "refurl" {
+		t.Error("wrong refurl")
+		return
+	}
+	if references[1].(map[string]interface{})["url"].(string) != "refurl2" {
+		t.Error("wrong refurl2")
+		return
+	}
+}
+
 func TestMain(m *testing.M) {
 	wiki = NewWikipediaMock()
 	wiki.(*WikipediaMock).AddPage(&PageMock{
@@ -76,6 +95,10 @@ func TestMain(m *testing.M) {
 		images: []wikipedia.ImageRequest{
 			{Image: wikipedia.Image{Url: "url", Title: "title", DescriptionUrl: "description"}},
 			{Image: wikipedia.Image{Url: "url2", Title: "title2", DescriptionUrl: "description2"}},
+		},
+		references: []wikipedia.ReferenceRequest{
+			{Reference: wikipedia.Reference{Url: "refurl"}},
+			{Reference: wikipedia.Reference{Url: "refurl2"}},
 		},
 	})
 	os.Exit(m.Run())
@@ -104,6 +127,8 @@ type PageMock struct {
 	summaryErr     error
 	images         []wikipedia.ImageRequest
 	imagesErr      error
+	references     []wikipedia.ReferenceRequest
+	referencesErr  error
 }
 
 func (w *WikipediaMock) AddPage(page *PageMock) {
@@ -166,7 +191,12 @@ func (p *PageMock) Images() <-chan wikipedia.ImageRequest {
 }
 func (p *PageMock) Extlinks() <-chan wikipedia.ReferenceRequest {
 	ch := make(chan wikipedia.ReferenceRequest)
-	defer close(ch)
+	go func() {
+		for _, im := range p.references {
+			ch <- im
+		}
+		close(ch)
+	}()
 	return ch
 }
 func (p *PageMock) Links() <-chan wikipedia.LinkRequest {

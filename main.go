@@ -35,6 +35,20 @@ var imageType = graphql.NewObject(
 	},
 )
 
+var referenceType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name: "Reference",
+		Fields: graphql.Fields{
+			"url": &graphql.Field{
+				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return p.Source.(wikipedia.Reference).Url, nil
+				},
+			},
+		},
+	},
+)
+
 var pageType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "Page",
@@ -80,6 +94,19 @@ var pageType = graphql.NewObject(
 						images = append(images, imageResult.Image)
 					}
 					return images, nil
+				},
+			},
+			"references": &graphql.Field{
+				Type: graphql.NewList(referenceType),
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					references := make([]wikipedia.Reference, 0, 100)
+					for referenceResult := range p.Source.(wikipedia.Page).Extlinks() {
+						if referenceResult.Err != nil {
+							return nil, referenceResult.Err
+						}
+						references = append(references, referenceResult.Reference)
+					}
+					return references, nil
 				},
 			},
 		},
